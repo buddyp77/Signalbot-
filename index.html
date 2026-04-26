@@ -599,16 +599,21 @@ function drawChart() {
   ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=1.5; ctx.stroke();
 }
 
-// ---- Fetch from Coinbase ----
+// ---- Fetch live prices via CoinGecko (no CORS issues) ----
+const GECKO_IDS = {
+  'BTC-USD':'bitcoin','ETH-USD':'ethereum','SOL-USD':'solana',
+  'DOGE-USD':'dogecoin','XRP-USD':'ripple','ADA-USD':'cardano','RAVE-USD':'ravedao'
+};
 async function fetchPrice(coinId) {
   try {
-    const res = await fetch(`https://api.coinbase.com/v2/prices/${coinId}/spot`, {
-      headers: { 'CB-VERSION': '2023-01-01' }
-    });
+    const geckoId = GECKO_IDS[coinId];
+    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${geckoId}&vs_currencies=usd`);
     const data = await res.json();
-    return parseFloat(data.data.amount);
+    const price = data[geckoId]?.usd;
+    if (price) return price;
+    throw new Error('No price');
   } catch(e) {
-    // Fallback: simulate if CORS blocked
+    // Fallback
     const base = {
       'BTC-USD':67000,'ETH-USD':3500,'SOL-USD':150,
       'DOGE-USD':0.15,'XRP-USD':0.58,'ADA-USD':0.45,'RAVE-USD':1.10
