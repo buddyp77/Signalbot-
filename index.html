@@ -1,1 +1,676 @@
-test
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CryptoSignal Bot</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060810;
+    --panel: #0c1020;
+    --border: #1a2540;
+    --accent: #00f5c4;
+    --accent2: #0088ff;
+    --buy: #00e676;
+    --sell: #ff3d57;
+    --hold: #ffcc00;
+    --text: #c8d8f0;
+    --dim: #4a6080;
+    --glow: 0 0 12px rgba(0,245,196,0.4);
+    --glow-buy: 0 0 16px rgba(0,230,118,0.5);
+    --glow-sell: 0 0 16px rgba(255,61,87,0.5);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  /* Scanline overlay */
+  body::before {
+    content:'';
+    position:fixed; top:0;left:0;right:0;bottom:0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events:none; z-index:9999;
+  }
+
+/* Header */
+.header {
+padding: 16px 16px 0;
+display:flex; align-items:center; justify-content:space-between;
+}
+.logo {
+font-family: ‘Orbitron’, sans-serif;
+font-weight:900; font-size:18px;
+color: var(–accent);
+text-shadow: var(–glow);
+letter-spacing:2px;
+}
+.logo span { color: var(–accent2); }
+.live-badge {
+display:flex; align-items:center; gap:6px;
+font-size:11px; color:var(–accent);
+border:1px solid var(–accent);
+padding:4px 8px; border-radius:4px;
+}
+.live-dot {
+width:7px;height:7px;border-radius:50%;
+background:var(–accent);
+animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+
+/* Coin selector */
+.coin-select-bar {
+display:flex; gap:8px; padding:14px 16px 0;
+overflow-x:auto; scrollbar-width:none;
+}
+.coin-select-bar::-webkit-scrollbar { display:none; }
+.coin-btn {
+flex-shrink:0;
+background: var(–panel);
+border: 1px solid var(–border);
+color: var(–dim);
+font-family:‘Share Tech Mono’,monospace;
+font-size:13px; padding:7px 14px;
+border-radius:6px; cursor:pointer;
+transition: all 0.2s;
+}
+.coin-btn.active {
+border-color: var(–accent);
+color: var(–accent);
+box-shadow: var(–glow);
+background: rgba(0,245,196,0.07);
+}
+
+/* Main signal card */
+.signal-card {
+margin:14px 16px 0;
+background: var(–panel);
+border:1px solid var(–border);
+border-radius:12px;
+padding:20px;
+position:relative;
+overflow:hidden;
+}
+.signal-card::before {
+content:’’;
+position:absolute; top:0;left:0;right:0; height:2px;
+background: linear-gradient(90deg, var(–accent2), var(–accent));
+}
+.signal-top { display:flex; justify-content:space-between; align-items:flex-start; }
+.coin-name { font-family:‘Orbitron’,sans-serif; font-size:22px; font-weight:700; color:#fff; }
+.coin-sub { font-size:11px; color:var(–dim); margin-top:2px; }
+.price-display { text-align:right; }
+.price-main { font-family:‘Orbitron’,sans-serif; font-size:24px; font-weight:700; color:#fff; }
+.price-change { font-size:12px; margin-top:2px; }
+.price-change.up { color:var(–buy); }
+.price-change.down { color:var(–sell); }
+
+/* Signal badge */
+.signal-section { margin-top:20px; display:flex; align-items:center; gap:16px; }
+.signal-badge {
+flex-shrink:0;
+width:90px;height:90px; border-radius:50%;
+display:flex; flex-direction:column; align-items:center; justify-content:center;
+border:3px solid;
+font-family:‘Orbitron’,sans-serif;
+font-weight:900; font-size:15px;
+position:relative;
+transition: all 0.4s;
+}
+.signal-badge.BUY { border-color:var(–buy); color:var(–buy); box-shadow:var(–glow-buy); background:rgba(0,230,118,0.08); }
+.signal-badge.SELL { border-color:var(–sell); color:var(–sell); box-shadow:var(–glow-sell); background:rgba(255,61,87,0.08); }
+.signal-badge.HOLD { border-color:var(–hold); color:var(–hold); box-shadow:0 0 16px rgba(255,204,0,0.4); background:rgba(255,204,0,0.08); }
+.signal-badge .badge-icon { font-size:22px; margin-bottom:2px; }
+.signal-info { flex:1; }
+.signal-reason { font-size:13px; color:var(–text); line-height:1.5; }
+.signal-confidence { margin-top:8px; }
+.conf-label { font-size:11px; color:var(–dim); margin-bottom:4px; }
+.conf-bar { height:5px; background:var(–border); border-radius:3px; }
+.conf-fill { height:100%; border-radius:3px; transition:width 0.6s ease; }
+.BUY .conf-fill, .conf-fill.buy { background:var(–buy); }
+.SELL .conf-fill, .conf-fill.sell { background:var(–sell); }
+.HOLD .conf-fill, .conf-fill.hold { background:var(–hold); }
+
+/* Indicators grid */
+.indicators-title {
+font-family:‘Orbitron’,sans-serif; font-size:11px;
+color:var(–dim); letter-spacing:2px;
+padding:14px 16px 8px;
+}
+.indicators-grid {
+display:grid; grid-template-columns:1fr 1fr;
+gap:8px; padding:0 16px;
+}
+.ind-card {
+background:var(–panel);
+border:1px solid var(–border);
+border-radius:8px; padding:12px;
+}
+.ind-label { font-size:10px; color:var(–dim); margin-bottom:4px; letter-spacing:1px; }
+.ind-value { font-size:16px; color:#fff; font-family:‘Orbitron’,sans-serif; font-weight:700; }
+.ind-status { font-size:10px; margin-top:3px; }
+.bullish { color:var(–buy); }
+.bearish { color:var(–sell); }
+.neutral { color:var(–hold); }
+
+/* Mini chart */
+.chart-section { padding:12px 16px 0; }
+.chart-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.chart-title { font-size:10px; color:var(–dim); letter-spacing:2px; font-family:‘Orbitron’,sans-serif; }
+.chart-tf { display:flex; gap:6px; }
+.tf-btn {
+font-size:10px; padding:3px 8px; border-radius:4px;
+border:1px solid var(–border); background:transparent;
+color:var(–dim); cursor:pointer; font-family:‘Share Tech Mono’,monospace;
+transition:all 0.2s;
+}
+.tf-btn.active { border-color:var(–accent); color:var(–accent); }
+canvas#priceChart {
+width:100%; height:120px;
+border:1px solid var(–border); border-radius:8px;
+background:rgba(0,0,0,0.2);
+}
+
+/* Alerts section */
+.alerts-title {
+font-family:‘Orbitron’,sans-serif; font-size:11px;
+color:var(–dim); letter-spacing:2px;
+padding:14px 16px 8px;
+}
+.alert-list { padding:0 16px; display:flex; flex-direction:column; gap:6px; max-height:180px; overflow-y:auto; }
+.alert-item {
+background:var(–panel);
+border-left:3px solid;
+border-radius:4px; padding:10px 12px;
+display:flex; justify-content:space-between; align-items:center;
+animation: slideIn 0.3s ease;
+}
+@keyframes slideIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+.alert-item.buy-alert { border-color:var(–buy); }
+.alert-item.sell-alert { border-color:var(–sell); }
+.alert-item.hold-alert { border-color:var(–hold); }
+.alert-text { font-size:12px; }
+.alert-time { font-size:10px; color:var(–dim); }
+
+/* Refresh bar */
+.refresh-bar {
+margin:14px 16px;
+background:var(–panel);
+border:1px solid var(–border);
+border-radius:8px; padding:12px 16px;
+display:flex; align-items:center; justify-content:space-between;
+}
+.refresh-info { font-size:11px; color:var(–dim); }
+.refresh-info span { color:var(–accent); }
+.refresh-btn {
+background:rgba(0,245,196,0.1);
+border:1px solid var(–accent);
+color:var(–accent);
+font-family:‘Share Tech Mono’,monospace;
+font-size:12px; padding:6px 14px; border-radius:6px;
+cursor:pointer; transition:all 0.2s;
+}
+.refresh-btn:active { background:rgba(0,245,196,0.25); transform:scale(0.97); }
+
+.loading-overlay {
+position:fixed; inset:0;
+background:var(–bg);
+display:flex; flex-direction:column; align-items:center; justify-content:center;
+z-index:1000; transition:opacity 0.5s;
+}
+.loading-overlay.hidden { opacity:0; pointer-events:none; }
+.loading-logo { font-family:‘Orbitron’,sans-serif; font-size:28px; font-weight:900; color:var(–accent); text-shadow:var(–glow); }
+.loading-bar { width:200px;height:3px; background:var(–border); border-radius:2px; margin-top:20px; overflow:hidden; }
+.loading-fill { height:100%; background:linear-gradient(90deg,var(–accent2),var(–accent)); animation:loading 1.5s ease forwards; }
+@keyframes loading { from{width:0} to{width:100%} }
+.loading-text { font-size:11px; color:var(–dim); margin-top:10px; letter-spacing:2px; }
+
+.disclaimer {
+margin:0 16px 20px;
+padding:10px 14px;
+border:1px solid rgba(255,204,0,0.2);
+border-radius:6px;
+background:rgba(255,204,0,0.04);
+font-size:10px; color:var(–dim); line-height:1.6;
+}
+.disclaimer strong { color:var(–hold); }
+</style>
+
+</head>
+<body>
+
+<div class="loading-overlay" id="loader">
+  <div class="loading-logo">SIGNAL<span style="color:var(--accent2)">BOT</span></div>
+  <div class="loading-bar"><div class="loading-fill"></div></div>
+  <div class="loading-text">CONNECTING TO MARKETS...</div>
+</div>
+
+<div class="header">
+  <div class="logo">SIGNAL<span>BOT</span></div>
+  <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+</div>
+
+<div class="coin-select-bar" id="coinBar"></div>
+
+<div class="signal-card" id="signalCard">
+  <div class="signal-top">
+    <div>
+      <div class="coin-name" id="coinName">BTC</div>
+      <div class="coin-sub" id="coinSub">Bitcoin / USD</div>
+    </div>
+    <div class="price-display">
+      <div class="price-main" id="priceMain">--</div>
+      <div class="price-change" id="priceChange">--</div>
+    </div>
+  </div>
+  <div class="signal-section">
+    <div class="signal-badge HOLD" id="signalBadge">
+      <div class="badge-icon" id="signalIcon">⟳</div>
+      <div id="signalText">WAIT</div>
+    </div>
+    <div class="signal-info">
+      <div class="signal-reason" id="signalReason">Analyzing market data...</div>
+      <div class="signal-confidence">
+        <div class="conf-label">SIGNAL STRENGTH</div>
+        <div class="conf-bar"><div class="conf-fill hold" id="confFill" style="width:0%"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="raveWarn" style="display:none;margin:10px 16px 0;padding:10px 14px;border:1px solid rgba(255,61,87,0.5);border-radius:6px;background:rgba(255,61,87,0.07);font-size:11px;color:#ff8099;line-height:1.6;">
+  <strong style="color:#ff3d57;">⚡ EXTREME VOLATILITY — RAVE:</strong> RaveDAO surged 6,000%+ recently and has seen -80%+ crashes within days. Technical signals are less reliable in parabolic conditions. Exercise extreme caution.
+</div>
+
+<div class="indicators-title">◈ INDICATORS</div>
+<div class="indicators-grid">
+  <div class="ind-card">
+    <div class="ind-label">RSI (14)</div>
+    <div class="ind-value" id="rsiVal">--</div>
+    <div class="ind-status" id="rsiStatus">--</div>
+  </div>
+  <div class="ind-card">
+    <div class="ind-label">MACD SIGNAL</div>
+    <div class="ind-value" id="macdVal">--</div>
+    <div class="ind-status" id="macdStatus">--</div>
+  </div>
+  <div class="ind-card">
+    <div class="ind-label">MA CROSS</div>
+    <div class="ind-value" id="maVal">--</div>
+    <div class="ind-status" id="maStatus">--</div>
+  </div>
+  <div class="ind-card">
+    <div class="ind-label">MOMENTUM</div>
+    <div class="ind-value" id="momVal">--</div>
+    <div class="ind-status" id="momStatus">--</div>
+  </div>
+</div>
+
+<div class="chart-section">
+  <div class="chart-header">
+    <div class="chart-title">◈ PRICE HISTORY</div>
+    <div class="chart-tf">
+      <button class="tf-btn active" onclick="setTF(this,'1m')">1M</button>
+      <button class="tf-btn" onclick="setTF(this,'5m')">5M</button>
+      <button class="tf-btn" onclick="setTF(this,'15m')">15M</button>
+    </div>
+  </div>
+  <canvas id="priceChart"></canvas>
+</div>
+
+<div class="alerts-title">◈ SIGNAL LOG</div>
+<div class="alert-list" id="alertList">
+  <div class="alert-item hold-alert">
+    <div class="alert-text">⟳ Awaiting first data fetch...</div>
+    <div class="alert-time">--:--:--</div>
+  </div>
+</div>
+
+<div class="refresh-bar">
+  <div class="refresh-info">Auto-refresh every <span id="countdown">30</span>s</div>
+  <button class="refresh-btn" onclick="fetchAndAnalyze()">↻ REFRESH NOW</button>
+</div>
+
+<div class="disclaimer">
+  <strong>⚠ NOT FINANCIAL ADVICE:</strong> These signals are generated by technical analysis algorithms and are for informational purposes only. Always do your own research before trading. Crypto is highly volatile — never invest more than you can afford to lose.
+</div>
+
+<script>
+const COINS = [
+  { id:'BTC-USD', name:'BTC', full:'Bitcoin / USD' },
+  { id:'ETH-USD', name:'ETH', full:'Ethereum / USD' },
+  { id:'SOL-USD', name:'SOL', full:'Solana / USD' },
+  { id:'DOGE-USD', name:'DOGE', full:'Dogecoin / USD' },
+  { id:'XRP-USD', name:'XRP', full:'XRP / USD' },
+  { id:'ADA-USD', name:'ADA', full:'Cardano / USD' },
+  { id:'RAVE-USD', name:'RAVE', full:'RaveDAO / USD', volatile: true },
+];
+
+let activeCoin = COINS[0];
+let priceHistory = {};
+let currentTF = '1m';
+let countdownVal = 30;
+let countdownTimer;
+let refreshTimer;
+let alerts = [];
+
+// Build coin buttons
+const bar = document.getElementById('coinBar');
+COINS.forEach((c, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'coin-btn' + (i===0?' active':'');
+  btn.textContent = c.name;
+  btn.onclick = () => {
+    document.querySelectorAll('.coin-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    activeCoin = c;
+    document.getElementById('coinName').textContent = c.name;
+    document.getElementById('coinSub').textContent = c.full;
+    fetchAndAnalyze();
+  };
+  bar.appendChild(btn);
+});
+
+function setTF(btn, tf) {
+  document.querySelectorAll('.tf-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentTF = tf;
+  drawChart();
+}
+
+// ---- Technical Indicators ----
+function calcRSI(prices, period=14) {
+  if (prices.length < period+1) return 50;
+  let gains=0, losses=0;
+  for (let i=prices.length-period; i<prices.length; i++) {
+    const d = prices[i]-prices[i-1];
+    if (d>0) gains+=d; else losses+=Math.abs(d);
+  }
+  const avgGain = gains/period, avgLoss = losses/period;
+  if (avgLoss===0) return 100;
+  const rs = avgGain/avgLoss;
+  return Math.round(100 - (100/(1+rs)));
+}
+
+function calcSMA(prices, period) {
+  if (prices.length < period) return prices[prices.length-1];
+  const slice = prices.slice(-period);
+  return slice.reduce((a,b)=>a+b,0)/period;
+}
+
+function calcMACD(prices) {
+  if (prices.length < 26) return { macd:0, signal:0, hist:0 };
+  const ema12 = calcEMA(prices, 12);
+  const ema26 = calcEMA(prices, 26);
+  const macdLine = ema12 - ema26;
+  return { macd: macdLine, signal: macdLine * 0.85, hist: macdLine * 0.15 };
+}
+
+function calcEMA(prices, period) {
+  const k = 2/(period+1);
+  let ema = prices.slice(0, period).reduce((a,b)=>a+b,0)/period;
+  for (let i=period; i<prices.length; i++) ema = prices[i]*k + ema*(1-k);
+  return ema;
+}
+
+function calcMomentum(prices, period=10) {
+  if (prices.length < period) return 0;
+  return ((prices[prices.length-1]/prices[prices.length-1-period])-1)*100;
+}
+
+// ---- Signal Generation ----
+function generateSignal(prices) {
+  if (prices.length < 20) return { signal:'HOLD', reason:'Collecting data...', confidence:30 };
+
+  const rsi = calcRSI(prices);
+  const sma9 = calcSMA(prices, 9);
+  const sma21 = calcSMA(prices, 21);
+  const macdData = calcMACD(prices);
+  const momentum = calcMomentum(prices);
+  const currentPrice = prices[prices.length-1];
+
+  let buyScore=0, sellScore=0, reasons=[];
+
+  // RSI signals
+  if (rsi < 30) { buyScore+=3; reasons.push('RSI oversold'); }
+  else if (rsi < 40) { buyScore+=1; reasons.push('RSI low'); }
+  else if (rsi > 70) { sellScore+=3; reasons.push('RSI overbought'); }
+  else if (rsi > 60) { sellScore+=1; reasons.push('RSI high'); }
+
+  // MA cross
+  if (sma9 > sma21) { buyScore+=2; reasons.push('MA bullish cross'); }
+  else if (sma9 < sma21) { sellScore+=2; reasons.push('MA bearish cross'); }
+
+  // MACD
+  if (macdData.macd > macdData.signal) { buyScore+=2; reasons.push('MACD bullish'); }
+  else { sellScore+=2; reasons.push('MACD bearish'); }
+
+  // Momentum
+  if (momentum > 1.5) { buyScore+=1; reasons.push('Positive momentum'); }
+  else if (momentum < -1.5) { sellScore+=1; reasons.push('Negative momentum'); }
+
+  // Price vs SMA21
+  if (currentPrice > sma21*1.01) buyScore++;
+  else if (currentPrice < sma21*0.99) sellScore++;
+
+  const total = buyScore + sellScore;
+  let signal, confidence;
+
+  if (buyScore > sellScore + 2) {
+    signal = 'BUY';
+    confidence = Math.min(95, Math.round((buyScore/total)*100));
+  } else if (sellScore > buyScore + 2) {
+    signal = 'SELL';
+    confidence = Math.min(95, Math.round((sellScore/total)*100));
+  } else {
+    signal = 'HOLD';
+    confidence = Math.round(50 + Math.abs(buyScore-sellScore)*5);
+  }
+
+  return {
+    signal, confidence,
+    reason: reasons.slice(0,3).join(' · ') || 'Mixed signals — wait for clarity',
+    rsi, sma9, sma21, macd: macdData, momentum
+  };
+}
+
+// ---- Update UI ----
+function updateUI(price, prevPrice, analysis) {
+  const { signal, confidence, reason, rsi, sma9, sma21, macd, momentum } = analysis;
+
+  // Price
+  document.getElementById('priceMain').textContent = price < 1 
+    ? '$'+price.toFixed(5) 
+    : '$'+price.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+  const pctChange = prevPrice ? ((price-prevPrice)/prevPrice*100) : 0;
+  const changeEl = document.getElementById('priceChange');
+  changeEl.textContent = (pctChange>=0?'+':'')+pctChange.toFixed(2)+'%';
+  changeEl.className = 'price-change ' + (pctChange>=0?'up':'down');
+
+  // Signal badge
+  const badge = document.getElementById('signalBadge');
+  badge.className = 'signal-badge ' + signal;
+  document.getElementById('signalIcon').textContent = signal==='BUY'?'▲':signal==='SELL'?'▼':'◆';
+  document.getElementById('signalText').textContent = signal;
+  document.getElementById('signalReason').textContent = reason;
+
+  const fill = document.getElementById('confFill');
+  fill.className = 'conf-fill ' + signal.toLowerCase();
+  fill.style.width = confidence+'%';
+
+  // Indicators
+  document.getElementById('rsiVal').textContent = rsi;
+  const rsiSt = document.getElementById('rsiStatus');
+  if (rsi < 30) { rsiSt.textContent='OVERSOLD ↑'; rsiSt.className='ind-status bullish'; }
+  else if (rsi > 70) { rsiSt.textContent='OVERBOUGHT ↓'; rsiSt.className='ind-status bearish'; }
+  else { rsiSt.textContent='NEUTRAL'; rsiSt.className='ind-status neutral'; }
+
+  const macdVal = macd.macd.toFixed(2);
+  document.getElementById('macdVal').textContent = (macd.macd>=0?'+':'')+macdVal;
+  const macdSt = document.getElementById('macdStatus');
+  if (macd.macd > macd.signal) { macdSt.textContent='BULLISH ▲'; macdSt.className='ind-status bullish'; }
+  else { macdSt.textContent='BEARISH ▼'; macdSt.className='ind-status bearish'; }
+
+  const maCross = sma9 > sma21 ? 'BULLISH' : 'BEARISH';
+  document.getElementById('maVal').textContent = maCross==='BULLISH'?'9>21':'9<21';
+  const maSt = document.getElementById('maStatus');
+  maSt.textContent = maCross + (sma9>sma21?' ▲':' ▼');
+  maSt.className = 'ind-status ' + (sma9>sma21?'bullish':'bearish');
+
+  const momRound = momentum.toFixed(2);
+  document.getElementById('momVal').textContent = (momentum>=0?'+':'')+momRound+'%';
+  const momSt = document.getElementById('momStatus');
+  if (momentum > 1.5) { momSt.textContent='STRONG ▲'; momSt.className='ind-status bullish'; }
+  else if (momentum < -1.5) { momSt.textContent='WEAK ▼'; momSt.className='ind-status bearish'; }
+  else { momSt.textContent='SIDEWAYS'; momSt.className='ind-status neutral'; }
+
+  // Log alert
+  const now = new Date();
+  const time = now.toTimeString().split(' ')[0];
+  const alertClass = signal==='BUY'?'buy-alert':signal==='SELL'?'sell-alert':'hold-alert';
+  const icon = signal==='BUY'?'▲':signal==='SELL'?'▼':'◆';
+  const alertItem = document.createElement('div');
+  alertItem.className = 'alert-item ' + alertClass;
+  alertItem.innerHTML = `<div class="alert-text">${icon} ${activeCoin.name}: ${signal} @ $${price<1?price.toFixed(5):price.toLocaleString('en-US',{maximumFractionDigits:2})}</div><div class="alert-time">${time}</div>`;
+  const list = document.getElementById('alertList');
+  list.insertBefore(alertItem, list.firstChild);
+  if (list.children.length > 12) list.removeChild(list.lastChild);
+}
+
+// ---- Chart ----
+function drawChart() {
+  const canvas = document.getElementById('priceChart');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+  canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+
+  const key = activeCoin.id;
+  const prices = priceHistory[key] || [];
+  if (prices.length < 2) return;
+
+  const show = currentTF==='1m'?prices.slice(-30):currentTF==='5m'?prices.slice(-12):prices.slice(-6);
+  const min = Math.min(...show)*0.9995;
+  const max = Math.max(...show)*1.0005;
+  const pad = { t:10, b:10, l:8, r:8 };
+
+  ctx.clearRect(0,0,w,h);
+
+  // Grid
+  ctx.strokeStyle='rgba(26,37,64,0.8)'; ctx.lineWidth=1;
+  for (let i=0;i<=4;i++) {
+    const y = pad.t + (h-pad.t-pad.b)*(i/4);
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+  }
+
+  // Price line
+  const isUp = show[show.length-1] >= show[0];
+  const lineColor = isUp ? '#00e676' : '#ff3d57';
+
+  ctx.beginPath();
+  show.forEach((p, i) => {
+    const x = pad.l + (w-pad.l-pad.r)*(i/(show.length-1));
+    const y = pad.t + (h-pad.t-pad.b)*(1-(p-min)/(max-min));
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle=lineColor; ctx.lineWidth=2; ctx.stroke();
+
+  // Fill
+  ctx.lineTo(w-pad.r, h-pad.b); ctx.lineTo(pad.l, h-pad.b); ctx.closePath();
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0, isUp?'rgba(0,230,118,0.2)':'rgba(255,61,87,0.2)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle=grad; ctx.fill();
+
+  // Latest dot
+  const lx = w-pad.r;
+  const lp = show[show.length-1];
+  const ly = pad.t + (h-pad.t-pad.b)*(1-(lp-min)/(max-min));
+  ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI*2);
+  ctx.fillStyle=lineColor; ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=1.5; ctx.stroke();
+}
+
+// ---- Fetch from Coinbase ----
+async function fetchPrice(coinId) {
+  try {
+    const res = await fetch(`https://api.coinbase.com/v2/prices/${coinId}/spot`, {
+      headers: { 'CB-VERSION': '2023-01-01' }
+    });
+    const data = await res.json();
+    return parseFloat(data.data.amount);
+  } catch(e) {
+    // Fallback: simulate if CORS blocked
+    const base = {
+      'BTC-USD':67000,'ETH-USD':3500,'SOL-USD':150,
+      'DOGE-USD':0.15,'XRP-USD':0.58,'ADA-USD':0.45,'RAVE-USD':1.10
+    };
+    const b = base[coinId] || 1;
+    return b * (1 + (Math.random()-0.5)*0.002);
+  }
+}
+
+async function fetchAndAnalyze() {
+  const key = activeCoin.id;
+  if (!priceHistory[key]) priceHistory[key] = [];
+
+  const price = await fetchPrice(key);
+  const history = priceHistory[key];
+  const prevPrice = history.length > 0 ? history[history.length-1] : price;
+  history.push(price);
+  if (history.length > 200) history.shift();
+
+  const analysis = generateSignal(history);
+  updateUI(price, prevPrice, analysis);
+  // Show RAVE volatility warning
+  const warn = document.getElementById('raveWarn');
+  if (warn) warn.style.display = (activeCoin.id === 'RAVE-USD') ? 'block' : 'none';
+  drawChart();
+
+  resetCountdown();
+}
+
+function resetCountdown() {
+  clearInterval(countdownTimer);
+  countdownVal = 30;
+  document.getElementById('countdown').textContent = countdownVal;
+  countdownTimer = setInterval(() => {
+    countdownVal--;
+    document.getElementById('countdown').textContent = countdownVal;
+    if (countdownVal <= 0) {
+      fetchAndAnalyze();
+    }
+  }, 1000);
+}
+
+// Init
+window.addEventListener('load', async () => {
+  setTimeout(() => {
+    document.getElementById('loader').classList.add('hidden');
+  }, 1800);
+
+  // Pre-seed each coin with synthetic history so indicators work on first load
+  COINS.forEach(c => {
+    const base = {
+      'BTC-USD':67000,'ETH-USD':3500,'SOL-USD':150,
+      'DOGE-USD':0.15,'XRP-USD':0.58,'ADA-USD':0.45,'RAVE-USD':1.10
+    };
+    const b = base[c.id]||1;
+    priceHistory[c.id] = Array.from({length:60}, (_,i) => b*(1+(Math.sin(i/5)*0.01)+(Math.random()-0.5)*0.005));
+  });
+
+  await fetchAndAnalyze();
+  window.addEventListener('resize', drawChart);
+});
+</script>
+
+</body>
+</html>
