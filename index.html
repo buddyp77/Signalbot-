@@ -1,60 +1,6 @@
-<!DOCTYPE html>
 
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>CryptoSignal Bot</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #060810;
-    --panel: #0c1020;
-    --border: #1a2540;
-    --accent: #00f5c4;
-    --accent2: #0088ff;
-    --buy: #00e676;
-    --sell: #ff3d57;
-    --hold: #ffcc00;
-    --text: #c8d8f0;
-    --dim: #4a6080;
-    --glow: 0 0 12px rgba(0,245,196,0.4);
-    --glow-buy: 0 0 16px rgba(0,230,118,0.5);
-    --glow-sell: 0 0 16px rgba(255,61,87,0.5);
-  }
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Share Tech Mono', monospace;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-  /* Scanline overlay */
-  body::before {
-    content:'';
-    position:fixed; top:0;left:0;right:0;bottom:0;
-    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
-    pointer-events:none; z-index:9999;
-  }
-
-/* Header */
-.header {
-padding: 16px 16px 0;
-display:flex; align-items:center; justify-content:space-between;
-}
-.logo {
-font-family: ‘Orbitron’, sans-serif;
-font-weight:900; font-size:18px;
-color: var(–accent);
-text-shadow: var(–glow);
-letter-spacing:2px;
-}
-.logo span { color: var(–accent2); }
-.live-badge {
-display:flex; align-items:center; gap:6px;
 font-size:11px; color:var(–accent);
-border:1px solid var(–accent);
+order:1px solid var(–accent);
 padding:4px 8px; border-radius:4px;
 }
 .live-dot {
